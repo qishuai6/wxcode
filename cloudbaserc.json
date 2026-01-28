@@ -1,0 +1,48 @@
+{
+  "envId": "wxcode-6gpgr5sa37a98394",
+  "version": "2.0",
+  "framework": {
+    "name": "wxcode-site",
+    "plugins": {
+      "function": {
+        "use": "@cloudbase/framework-plugin-function",
+        "inputs": {
+          "functionRootPath": "functions",
+          "functions": [
+            {
+              "name": "ai",
+              "runtime": "Nodejs18.15",
+              "timeout": 30,
+              "memorySize": 256,
+              "handler": "index.main",
+              "envVariables": {
+                "DEEPSEEK_API_KEY": "sk-655821239ec74b8e90a5c62899326136"
+              },
+              "aclRule": {
+                "invoke": true
+              }
+            }
+          ],
+          "servicePaths": {
+            "ai": "/ai"
+          }
+        }
+      },
+      "website": {
+        "use": "@cloudbase/framework-plugin-website",
+        "inputs": {
+          "outputPath": ".",
+          "ignore": [
+            "functions",
+            "api",
+            ".git",
+            ".vercel",
+            "node_modules",
+            "cloudbaserc.json",
+            ".gitignore"
+          ]
+        }
+      }
+    }
+  }
+}
