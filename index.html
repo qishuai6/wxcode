@@ -55,6 +55,17 @@
     font-weight: 400;
     line-height: 1.5;
   }
+  .author-link {
+    font-size: 14px;
+    margin-top: 12px;
+  }
+  .author-link a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+  .author-link a:hover {
+    text-decoration: underline;
+  }
 
   /* ===== Container ===== */
   .container {
@@ -108,6 +119,53 @@
   }
   .btn-main:hover { background: #0066d6; }
   .btn-main:active { transform: scale(0.97); }
+
+  /* ===== Verification Card ===== */
+  .verify-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    box-shadow: var(--shadow);
+    margin-bottom: 32px;
+  }
+  .verify-card.verified {
+    background: var(--green-bg);
+    border: 1.5px solid var(--green);
+  }
+  .verify-row {
+    display: flex;
+    gap: 12px;
+  }
+  .btn-verify {
+    height: 50px;
+    padding: 0 24px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-verify:hover { background: #2db84d; }
+  .btn-verify:active { transform: scale(0.97); }
+  .verify-hint {
+    font-size: 13px;
+    margin-top: 10px;
+    padding-left: 2px;
+  }
+  .verify-hint.error { color: #ff3b30; }
+  .verify-hint.success { color: var(--green); }
+
+  /* Disabled state for buttons */
+  .btn-copy.disabled, .btn-save.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
 
   /* ===== Results ===== */
   .results { display: none; }
@@ -373,6 +431,7 @@
 <header>
   <h1>微信号加密传输</h1>
   <p>让机器看不懂，让人看得懂</p>
+  <p class="author-link">@小红书：AI 产品小行家 <a href="https://xhslink.com/m/4SHro9DoE2a" target="_blank">我已入驻REDCity，来看看我的主页>></a></p>
 </header>
 
 <div class="container">
@@ -382,6 +441,15 @@
       <input class="input-field" type="text" id="wxInput" placeholder="输入你的微信号" maxlength="40" autocomplete="off" spellcheck="false">
       <button class="btn-main" onclick="generate()">生成</button>
     </div>
+  </div>
+
+  <!-- Verification Code -->
+  <div class="verify-card" id="verifyCard">
+    <div class="verify-row">
+      <input class="input-field" type="text" id="codeInput" placeholder="输入验证码解锁复制/下载" maxlength="10" autocomplete="off" spellcheck="false" style="text-transform:uppercase;">
+      <button class="btn-verify" onclick="verifyCode()">验证</button>
+    </div>
+    <div class="verify-hint" id="verifyHint"></div>
   </div>
 
   <!-- Results -->
@@ -531,6 +599,91 @@
 <script>
 // ======================== CONFIG ========================
 const DS_API = 'https://wxcode-site.vercel.app/api/ai';
+
+// ======================== VERIFICATION CODES ========================
+const VALID_CODES = new Set([
+  'FHBKHCPC','5J6JSPL7','ENFWDUGN','8AQCVJAL','HQMY7PEQ','GB7BJZNN','Z2SHE6VA','Q2EKXA4K',
+  'F9DQXKPC','4AFQEQ82','P3ZAA5RY','CW3D9MGA','2W6QBSR6','UNWC6CPG','62QGAAH5','YEN95Q5S',
+  'SYVMNAGQ','WAN5P7CM','YCLBJPD5','6DTV5EJ5','ZZKUXCLF','5AZ9TFMS','BV2C8DC7','FCGCMJSW',
+  '96QS9GC7','3Y4KCYAW','88WH2YF9','9TZC3D6L','GGJX9GRG','R727ALEA','JWG3P3EX','JUKYA678',
+  '3GQGESFM','GEEHJDEQ','EGZXUQEZ','WT88ADFW','9RGFMYME','GVWXGD4Y','2XC8GT68','TPZ6PPAT',
+  'SB5ZE2AQ','6NF4WKM4','3STEY2AZ','KM9Z52UP','7NKCK2NE','NALMCT7H','RSZ4734X','APX4K5FV',
+  'ZUWT87HS','WTRTCSX3','TQHGVA7A','F2L2HG4G','S4HGHG8Y','NKT5QYCY','5STVZYZC','9W4WUS9B',
+  'GLKBCJKL','A42TTAHQ','RYWMX3GK','5ERJM3H8','LZQNT42J','33KKTHB9','ZVSQRRQD','Y8UHN2NL',
+  '9W88GE2X','JFJ8TGAN','D8MURW38','MUT3MSDM','5ATXMJVE','FXB7VDWV','CFLKGLGG','SUTT4HGZ',
+  'SJN7V6ZY','6UKWFPU7','5Z5ZSSA6','T8BJZ58U','4Z54XBCC','TJX22Z5N','WYCS95Z9','ZNPECDQM',
+  'UBFAVL2Y','L8REMYXD','8VZVWFRV','65PZ3PWH','JAVAHC5X','T6AZ6H8B','SBFB3NBK','BL2C97R4',
+  '3BD3EF6M','D8ET75CQ','BA7SV4GG','ZPDT7LJ3','XX32LGT7','Q7J5T6EF','ELYADSN2','JF8MRKWY',
+  '2E9CVQFC','X98RAKFQ','T5WKTZ8R','P7MMKUFG','SSHLEJFN','ZENAU75S','JTTZVHTX','3ZH59AVZ',
+  '4NFRU3CX','5NPHXKSN','Q62U9YES','P9ZTH96N','8UFXX448','Z9QYC7B7','P2PB764X','JNYQLURE',
+  'X9CCA3SC','ACEBEHP5','MPKP6S4E','4CSAFEJS','TST9GU6F','WT6FSVQM','C8ZDVWAH','RYD75NK6',
+  'VQDWRK3J','3MKA6MGE','MHHCUP4U','J3HEMBVF','NZRK499Z','5VS93VCD','NT262CVA','FC5RZRWV',
+  'SF5M5G4K','AD4Z8F57','MG6QH8PS','FJUEQ3CM','ZGSS7ZGU','7A3HMAX5','V893UB9N','2X8CWJFH',
+  'ZGK6J9D4','A7MWEXM7','5FXJB22Q','CSRQHC62','SJM4HTVP','HLAP7MGS','JZR6L3LU','SYGX7HZJ',
+  '3TPJH3BY','LYEL7CFK','E4Z464P4','GN4BKM6A','F6N8NQJB','6YDU9BFU','T4RV26J8','T7FGCEBV',
+  'SCCY4WT6','6PFQWGVL','CURSHBSP','MSSW2KPX','L2B8234R','XAJZDLPE','4G4CRQWW','F52B8XXA',
+  'WCPJRRQP','P6K6ZDV6','SP48EYT8','PLGBAHWC','JS4Y6DWV','XM66RQBJ','5NA7EB7K','LYZPH5C7',
+  'ABYT9RC3','W96QJCB7','CG8SMPCC','TNRM3YNE','TDQ7Y425','8PHJ4Q6K','29NMA5YQ','7Q59652C',
+  '3CN5VPFM','LJZFSDS6','BD3BEDY4','4V6VWK58','WBRLMVAR','K2DWUST5','4GA2WTUR','NU5Y8LZK',
+  '4ECPC5F6','7G6FGH44','SRT7F4DE','9FH83SV2','R83VT7B8','8A3C647G','SAAVEYK7','4L2J4TLZ',
+  'LGY9F5DD','TPV9W4S5','Z695HZ79','8TPFWMJV','SJBQD6SS','CCM3S7WU','BCMQ5LXH','75HB69W5'
+]);
+
+let isVerified = localStorage.getItem('wxcode_verified') === 'true';
+
+function verifyCode() {
+  const input = document.getElementById('codeInput');
+  const hint = document.getElementById('verifyHint');
+  const card = document.getElementById('verifyCard');
+  const code = input.value.trim().toUpperCase();
+
+  if (VALID_CODES.has(code)) {
+    isVerified = true;
+    localStorage.setItem('wxcode_verified', 'true');
+    card.classList.add('verified');
+    hint.className = 'verify-hint success';
+    hint.textContent = '验证成功！已解锁全部功能';
+    input.disabled = true;
+    updateButtonStates();
+  } else {
+    hint.className = 'verify-hint error';
+    hint.textContent = '验证码无效，请检查后重试';
+  }
+}
+
+function updateButtonStates() {
+  const copyBtns = document.querySelectorAll('.btn-copy');
+  const saveBtn = document.querySelector('.btn-save');
+  copyBtns.forEach(btn => {
+    if (isVerified) {
+      btn.classList.remove('disabled');
+    } else {
+      btn.classList.add('disabled');
+    }
+  });
+  if (saveBtn) {
+    if (isVerified) {
+      saveBtn.classList.remove('disabled');
+    } else {
+      saveBtn.classList.add('disabled');
+    }
+  }
+}
+
+// Check verification on page load
+window.addEventListener('DOMContentLoaded', () => {
+  if (isVerified) {
+    const card = document.getElementById('verifyCard');
+    const hint = document.getElementById('verifyHint');
+    const input = document.getElementById('codeInput');
+    card.classList.add('verified');
+    hint.className = 'verify-hint success';
+    hint.textContent = '已验证，全部功能已解锁';
+    input.disabled = true;
+    input.placeholder = '已验证';
+  }
+  updateButtonStates();
+});
 
 // ======================== ENCODING MAPS ========================
 const homoglyphs = {
@@ -908,6 +1061,10 @@ function refreshImage() {
 }
 
 function saveImage() {
+  if (!isVerified) {
+    alert('请先输入验证码解锁下载功能');
+    return;
+  }
   const c = document.getElementById('imgCanvas');
   const a = document.createElement('a');
   a.download = 'wxcode.png';
@@ -937,6 +1094,10 @@ function generate() {
 
 // ======================== COPY ========================
 function copyText(btn, id) {
+  if (!isVerified) {
+    alert('请先输入验证码解锁复制功能');
+    return;
+  }
   const text = document.getElementById(id).textContent;
   if(!text) return;
   navigator.clipboard.writeText(text).then(() => {
