@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WXCODE // 微信号加密</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #050505;
+    --surface: #0d0d0d;
+    --border: #1a1a1a;
+    --border-hover: #2a2a2a;
+    --text: #e0e0e0;
+    --text-dim: #555;
+    --text-muted: #333;
+    --accent: #00ff88;
+    --accent-dim: rgba(0,255,136,0.08);
+    --accent-glow: rgba(0,255,136,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- Header ---- */
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    position: relative;
+  }
+  .logo {
+    font-size: 11px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 400;
+    margin-bottom: 16px;
+    opacity: 0.7;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+  h1 span {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .tagline {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 12px;
+    font-weight: 300;
+    letter-spacing: 1px;
+  }
+
+  /* ---- Main ---- */
+  .main {
+    max-width: 520px;
+    width: 100%;
+  }
+
+  /* ---- Input ---- */
+  .input-section {
+    position: relative;
+    margin-bottom: 40px;
+  }
+  .input-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    display: block;
+  }
+  .input-wrap {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .input-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-glow), 0 0 30px var(--accent-glow);
+  }
+  .input-prefix {
+    background: var(--surface);
+    color: var(--accent);
+    padding: 16px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    border-right: 1px solid var(--border);
+    user-select: none;
+    font-weight: 500;
+  }
+  #wxInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: 16px;
+    padding: 16px;
+    outline: none;
+    font-weight: 400;
+    letter-spacing: 1px;
+  }
+  #wxInput::placeholder {
+    color: var(--text-muted);
+    font-weight: 300;
+  }
+  .btn-generate {
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 8px;
+    margin-top: 16px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-generate::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .btn-generate:hover::before { opacity: 0.08; }
+  .btn-generate:hover {
+    box-shadow: 0 0 30px var(--accent-glow);
+  }
+  .btn-generate:active { transform: scale(0.99); }
+
+  /* ---- Results ---- */
+  .results { display: none; }
+  .results.show { display: block; }
+
+  .section-line {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 40px 0 28px;
+  }
+  .section-line::before,
+  .section-line::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .section-line span {
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  /* ---- Card ---- */
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+    background: var(--surface);
+    transition: border-color 0.3s;
+  }
+  .card:hover {
+    border-color: var(--border-hover);
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .card-index {
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    font-weight: 600;
+  }
+  .card-title {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+    margin-top: 4px;
+  }
+  .card-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-weight: 300;
+  }
+  .btn-copy {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 10px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-copy:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn-copy.copied {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .output-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #fff;
+    word-break: break-all;
+    letter-spacing: 0.5px;
+    min-height: 52px;
+    user-select: all;
+  }
+  .card-hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 12px;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+  .card-hint::before {
+    content: '→ ';
+    color: var(--accent);
+    opacity: 0.5;
+  }
+
+  /* ---- Image Card ---- */
+  .canvas-area {
+    text-align: center;
+  }
+  .canvas-area canvas {
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    max-width: 100%;
+    margin-bottom: 14px;
+  }
+  .btn-save {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 10px 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .btn-save:hover {
+    background: var(--accent-dim);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  /* ---- Footer Tip ---- */
+  .tip-section {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-top: 24px;
+  }
+  .tip-title {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+  .tip-item {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 2;
+    font-weight: 300;
+  }
+  .tip-item::before {
+    content: '//';
+    color: var(--text-muted);
+    margin-right: 8px;
+    font-weight: 400;
+  }
+  .tip-item em {
+    font-style: normal;
+    color: var(--text);
+  }
+
+  /* ---- Animations ---- */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .results.show .card,
+  .results.show .tip-section {
+    animation: fadeUp 0.4s ease both;
+  }
+  .results.show .card:nth-child(2) { animation-delay: 0.05s; }
+  .results.show .card:nth-child(3) { animation-delay: 0.10s; }
+  .results.show .card:nth-child(4) { animation-delay: 0.15s; }
+  .results.show .card:nth-child(5) { animation-delay: 0.20s; }
+  .results.show .card:nth-child(6) { animation-delay: 0.25s; }
+  .results.show .tip-section { animation-delay: 0.30s; }
+
+  /* ---- Footer ---- */
+  footer {
+    margin-top: 60px;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">WXCODE</div>
+  <h1>微信号<span>.</span>加密传输</h1>
+  <p class="tagline">让机器看不懂 // 让人看得懂</p>
+</header>
+
+<div class="main">
+  <div class="input-section">
+    <label class="input-label">Input</label>
+    <div class="input-wrap">
+      <div class="input-prefix">_&gt;</div>
+      <input type="text" id="wxInput" placeholder="输入微信号..." maxlength="40" autocomplete="off" spellcheck="false">
+    </div>
+    <button class="btn-generate" onclick="generate()">Encode</button>
+  </div>
+
+  <div class="results" id="results">
+    <div class="section-line"><span>Output</span></div>
+
+    <!-- 01 同形字 -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-index">01</div>
+          <div class="card-title">同形字替换</div>
+          <div class="card-desc">Unicode 同形字符映射，肉眼无法区分</div>
+        </div>
+        <button class="btn-copy" onclick="copyText(this,'out1')">Copy</button>
+      </div>
+      <div class="output-box" id="out1"></div>
+      <div class="card-hint">提示对方：这是我的V，照着手动打一遍</div>
+    </div>
+
+    <!-- 02 Emoji -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-index">02</div>
+          <div class="card-title">符号间隔</div>
+          <div class="card-desc">随机符号填充，去掉符号即为原文</div>
+        </div>
+        <button class="btn-copy" onclick="copyText(this,'out2')">Copy</button>
+      </div>
+      <div class="output-box" id="out2"></div>
+      <div class="card-hint">提示对方：去掉符号就是我的V</div>
+    </div>
+
+    <!-- 03 谐音 -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-index">03</div>
+          <div class="card-title">谐音密码</div>
+          <div class="card-desc">数字转谐音汉字，读出来即还原</div>
+        </div>
+        <button class="btn-copy" onclick="copyText(this,'out3')">Copy</button>
+      </div>
+      <div class="output-box" id="out3"></div>
+      <div class="card-hint">提示对方：读出来，中文替换成数字</div>
+    </div>
+
+    <!-- 04 零宽 -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-index">04</div>
+          <div class="card-title">零宽注入</div>
+          <div class="card-desc">插入不可见零宽字符，显示与原文一致</div>
+        </div>
+        <button class="btn-copy" onclick="copyText(this,'out4')">Copy</button>
+      </div>
+      <div class="output-box" id="out4"></div>
+      <div class="card-hint">外观完全一致，包含隐藏字符破坏匹配</div>
+    </div>
+
+    <!-- 05 图片 -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-index">05</div>
+          <div class="card-title">图片生成</div>
+          <div class="card-desc">渲染为图片，完全规避文字检测</div>
+        </div>
+      </div>
+      <div class="canvas-area">
+        <canvas id="imgCanvas"></canvas>
+        <br>
+        <button class="btn-save" onclick="saveImage()">Save Image</button>
+      </div>
+      <div class="card-hint">最安全方式，直接发送图片</div>
+    </div>
+
+    <div class="tip-section">
+      <div class="tip-title">Tips</div>
+      <div class="tip-item"><em>方式 01 / 04</em> 最隐蔽，外观与原文一致</div>
+      <div class="tip-item"><em>方式 05</em> 最安全，图片不触发文字检测</div>
+      <div class="tip-item">提醒对方 <em>手动输入</em> 而非复制粘贴</div>
+      <div class="tip-item">可将「微信」替代为 <em>V / VX / 威</em></div>
+    </div>
+  </div>
+</div>
+
+<footer>WXCODE &copy; 2025</footer>
+
+<script>
+const homoglyphs = {
+  'a':'а','c':'с','d':'ԁ','e':'е','g':'ɡ','h':'һ','i':'і','j':'ј',
+  'l':'ӏ','o':'о','p':'р','s':'ѕ','v':'ν','x':'х','y':'у',
+  'A':'А','B':'В','C':'С','E':'Е','H':'Н','I':'І','J':'Ј',
+  'K':'К','M':'М','O':'О','P':'Р','S':'Ѕ','T':'Т','X':'Х','Y':'У',
+  '0':'Ο','1':'Ɩ',
+};
+
+const symbols = ['·','᐀','⊹','⊸','⋮','⌇','⊶','⊷','░','▪','╌','◦','◌','⊘','⊙'];
+const emojis  = ['🌸','✨','🌙','💫','⭐','🦋','🍒','🎀','💜','🍃'];
+const fillers  = [...symbols, ...emojis];
+
+const phoneticMap = {
+  '0':'零','1':'幺','2':'尔','3':'仨','4':'思','5':'唔','6':'溜','7':'柒','8':'捌','9':'玖',
+};
+
+const zw = ['\u200B','\u200C','\u200D','\uFEFF'];
+const rand = a => a[Math.floor(Math.random()*a.length)];
+
+function encodeHomoglyph(t) {
+  return [...t].map(c => homoglyphs[c] && Math.random()<0.75 ? homoglyphs[c] : c).join('');
+}
+
+function encodeEmoji(t) {
+  return [...t].map((c,i) => i<t.length-1 ? c+rand(fillers) : c).join('');
+}
+
+function encodePhonetic(t) {
+  return [...t].map(c => phoneticMap[c] || c).join('');
+}
+
+function encodeZeroWidth(t) {
+  return [...t].map((c,i) => {
+    if(i>=t.length-1) return c;
+    let z=''; for(let k=0;k<Math.floor(Math.random()*3)+1;k++) z+=rand(zw);
+    return c+z;
+  }).join('');
+}
+
+function drawImage(text) {
+  const canvas = document.getElementById('imgCanvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(360, text.length * 30 + 80);
+  const h = 140;
+
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = Math.min(w, 470) + 'px';
+  canvas.style.height = h * (Math.min(w, 470) / w) + 'px';
+  ctx.scale(dpr, dpr);
+
+  // bg
+  ctx.fillStyle = '#0a0a0a';
+  ctx.beginPath();
+  ctx.roundRect(0, 0, w, h, 8);
+  ctx.fill();
+
+  // border
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(0.5, 0.5, w-1, h-1, 8);
+  ctx.stroke();
+
+  // grid dots
+  for(let x=20; x<w; x+=20) {
+    for(let y=20; y<h; y+=20) {
+      ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.03})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
+  // label
+  ctx.fillStyle = '#00ff88';
+  ctx.globalAlpha = 0.5;
+  ctx.font = '500 10px "JetBrains Mono", monospace';
+  ctx.letterSpacing = '3px';
+  ctx.textAlign = 'center';
+  ctx.fillText('WECHAT ID', w/2, 32);
+  ctx.globalAlpha = 1;
+
+  // main text
+  const charW = 22;
+  const totalW = text.length * charW;
+  const startX = (w - totalW) / 2 + charW / 2;
+
+  [...text].forEach((ch, i) => {
+    ctx.save();
+    const x = startX + i * charW;
+    const y = 76;
+    const angle = (Math.random() - 0.5) * 0.08;
+    const offsetY = (Math.random() - 0.5) * 2;
+    ctx.translate(x, y + offsetY);
+    ctx.rotate(angle);
+
+    // glow
+    ctx.shadowColor = '#00ff88';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = '#fff';
+    ctx.font = '600 24px "JetBrains Mono", "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(ch, 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  });
+
+  // scan lines
+  for(let y=0; y<h; y+=2) {
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(0, y, w, 1);
+  }
+
+  // noise lines
+  for(let i=0; i<2; i++) {
+    ctx.strokeStyle = `rgba(0,255,136,${Math.random()*0.06+0.02})`;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(20, Math.random()*h);
+    ctx.bezierCurveTo(w*0.3, Math.random()*h, w*0.7, Math.random()*h, w-20, Math.random()*h);
+    ctx.stroke();
+  }
+
+  // bottom hint
+  ctx.fillStyle = '#333';
+  ctx.font = '300 10px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('// 手动输入添加好友', w/2, h - 18);
+}
+
+function generate() {
+  const v = document.getElementById('wxInput').value.trim();
+  if(!v) return document.getElementById('wxInput').focus();
+
+  document.getElementById('out1').textContent = encodeHomoglyph(v);
+  document.getElementById('out2').textContent = encodeEmoji(v);
+  document.getElementById('out3').textContent = encodePhonetic(v);
+  document.getElementById('out4').textContent = encodeZeroWidth(v);
+  drawImage(v);
+
+  const r = document.getElementById('results');
+  r.classList.remove('show');
+  void r.offsetWidth; // reflow
+  r.classList.add('show');
+  r.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function copyText(btn, id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Done';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  }).catch(() => {
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById(id));
+    const sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+    document.execCommand('copy');
+    btn.textContent = 'Done'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function saveImage() {
+  const c = document.getElementById('imgCanvas');
+  const a = document.createElement('a');
+  a.download = 'wxcode.png';
+  a.href = c.toDataURL('image/png');
+  a.click();
+}
+
+document.getElementById('wxInput').addEventListener('keydown', e => { if(e.key==='Enter') generate(); });
+</script>
+
+</body>
+</html>
